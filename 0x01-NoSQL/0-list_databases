@@ -1,0 +1,3 @@
+// list all databases in mongoDB interactive mode
+show databases;
+
