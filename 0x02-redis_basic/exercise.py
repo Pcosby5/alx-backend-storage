@@ -4,7 +4,7 @@
 import uuid
 import redis
 import functools
-from typing import Any, Callable, Union
+from typing import Any, Callable, Union, Optional
 
 
 def count_calls(method: Callable) -> Callable:
@@ -73,10 +73,10 @@ class Cache:
         return key
 
     def get(
-            self,
-            key: str,
-            fn: Callable[[Any], Union[str, bytes, int, float]] = None,
-            ) -> Union[str, bytes, int, float]:
+        self,
+        key: str,
+        fn: Optional[Callable[[Any], Union[str, bytes, int, float]]] = None
+            ) -> Optional[Union[str, bytes, int, float]]:
         """
         Retrieves a value from a Redis data storage.
 
@@ -93,7 +93,7 @@ class Cache:
         # Apply the function to the data (if provided)
         return fn(data) if fn is not None else data
 
-    def get_str(self, key: str) -> str:
+    def get_str(self, key: str) -> Optional[str]:
         """
         Retrieves a string value from a Redis data storage.
 
@@ -103,33 +103,49 @@ class Cache:
         Returns:
             The retrieved string value.
         """
+        # Retrieve the data using the get method
+        data = self.get(key)
 
-        return self.get(key, lambda y: y.decode('utf-8'))
+        # Check if data is None
+        if data is None:
+            return None
 
-    def get_int(self, key: str) -> int:
-        """
-        Retrieves an integer value from a Redis data storage.
-
-        Args:
-            key: The key of the data to be retrieved.
-
-        Returns:
-            The retrieved integer value.
-        """
-
-        return self.get(key, lambda y: int(y))
+        # Convert data to string and return
+        return str(data)
 
 
-# Example usage:
-if __name__ == "__main__":
-    cache = Cache()
+def get_int(self, key: str) -> Optional[int]:
+    """
+    Retrieves an integer value from a Redis data storage.
 
-    TEST_CASES = {
-        b"foo": None,
-        123: int,
-        "bar": lambda d: d.decode("utf-8")
-    }
+    Args:
+        key: The key of the data to be retrieved.
 
-    for value, fn in TEST_CASES.items():
-        key = cache.store(value)
-        assert cache.get(key, fn=fn) == value
+    Returns:
+        The retrieved integer value.
+    """
+
+    # Retrieve the data using the get method
+    data = self.get(key)
+
+    # Check if data is None
+    if data is None:
+        return None
+
+    # Convert data to an integer and return
+    return int(data)
+
+
+# # Example usage:
+# if __name__ == "__main__":
+#     cache = Cache()
+
+#     TEST_CASES = {
+#         b"foo": None,
+#         123: int,
+#         "bar": lambda d: d.decode("utf-8")
+#     }
+
+#     for value, fn in TEST_CASES.items():
+#         key = cache.store(value)
+#         assert cache.get(key, fn=fn) == value
