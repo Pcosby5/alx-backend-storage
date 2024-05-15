@@ -3,38 +3,39 @@
 '''
 import uuid
 import redis
-import functools
+from functools import wraps
 from typing import Any, Callable, Union, Optional
 
 
 def count_calls(method: Callable) -> Callable:
-    """
-    Decorator that counts the number of times a method is called.
-
-    Args:
-        method: The method to be decorated.
-
-    Returns:
-        The decorated method.
-    """
-    @functools.wraps(method)
-    def wrapper(self, *args, **kwargs):
-        """
-        Wrapper for the decorated method.
-
-        Args:
-            self: The instance of the class.
-            *args: The positional arguments passed to the method.
-            **kwargs: The keyword arguments passed to the method.
-
-        Returns:
-            The result of the original method.
-        """
-        # Increment the call count
-        self._redis.incr(method.__qualname__)
-        # Call the original method
+    '''Tracks the number of calls made to a method in a Cache class.
+    '''
+    @wraps(method)
+    def invoker(self, *args, **kwargs) -> Any:
+        '''Invokes the given method after incrementing its call counter.
+        '''
+        if isinstance(self._redis, redis.Redis):
+            self._redis.incr(method.__qualname__)
         return method(self, *args, **kwargs)
-    return wrapper
+    return invoker
+
+
+def call_history(method: Callable) -> Callable:
+    '''Tracks the call details of a method in a Cache class.
+    '''
+    @wraps(method)
+    def invoker(self, *args, **kwargs) -> Any:
+        '''Returns the method's output after storing its inputs and output.
+        '''
+        in_key = '{}:inputs'.format(method.__qualname__)
+        out_key = '{}:outputs'.format(method.__qualname__)
+        if isinstance(self._redis, redis.Redis):
+            self._redis.rpush(in_key, str(args))
+        output = method(self, *args, **kwargs)
+        if isinstance(self._redis, redis.Redis):
+            self._redis.rpush(out_key, output)
+        return output
+    return invoker
 
 
 class Cache:
@@ -58,6 +59,7 @@ class Cache:
         self._redis.flushdb()
 
     @count_calls
+    @call_history
     def store(self, data: Union[str, bytes, int, float]) -> str:
         """
         Store the data in Redis with a UUID key and return the key.
