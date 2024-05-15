@@ -1,10 +1,40 @@
 #!/usr/bin/env python3
 '''A module for using the Redis NoSQL data storage.
 '''
-
-import redis
 import uuid
+import redis
+import functools
 from typing import Any, Callable, Union
+
+
+def count_calls(method: Callable) -> Callable:
+    """
+    Decorator that counts the number of times a method is called.
+
+    Args:
+        method: The method to be decorated.
+
+    Returns:
+        The decorated method.
+    """
+    @functools.wraps(method)
+    def wrapper(self, *args, **kwargs):
+        """
+        Wrapper for the decorated method.
+
+        Args:
+            self: The instance of the class.
+            *args: The positional arguments passed to the method.
+            **kwargs: The keyword arguments passed to the method.
+
+        Returns:
+            The result of the original method.
+        """
+        # Increment the call count
+        self._redis.incr(method.__qualname__)
+        # Call the original method
+        return method(self, *args, **kwargs)
+    return wrapper
 
 
 class Cache:
@@ -27,6 +57,7 @@ class Cache:
         self._redis = redis.Redis()
         self._redis.flushdb()
 
+    @count_calls
     def store(self, data: Union[str, bytes, int, float]) -> str:
         """
         Store the data in Redis with a UUID key and return the key.
