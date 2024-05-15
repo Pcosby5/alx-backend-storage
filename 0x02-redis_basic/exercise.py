@@ -160,6 +160,24 @@ def get_int(self, key: str) -> Optional[int]:
     return int(data)
 
 
+def replay(method: Callable):
+    redis_instance = redis.Redis()
+    input_key = f"{method.__qualname__}:inputs"
+    output_key = f"{method.__qualname__}:outputs"
+
+    inputs = redis_instance.lrange(input_key, 0, -1)
+    outputs = redis_instance.lrange(output_key, 0, -1)
+
+    call_count = len(inputs)
+
+    print(f"{method.__qualname__} was called {call_count} times:")
+
+    for inp, out in zip(inputs, outputs):
+        inp_str = inp.decode('utf-8')
+        out_str = out.decode('utf-8')
+        print(f"{method.__qualname__}(*{inp_str}) -> {out_str}")
+
+
 # # Example usage:
 # if __name__ == "__main__":
 #     cache = Cache()
