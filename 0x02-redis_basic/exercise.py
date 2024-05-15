@@ -9,10 +9,24 @@ from typing import Any, Callable, Union, Optional
 
 def count_calls(method: Callable) -> Callable:
     '''Tracks the number of calls made to a method in a Cache class.
+
+    Args:
+        method (Callable): The method to track the number of calls.
+
+    Returns:
+        Callable: The wrapped method.
     '''
     @wraps(method)
     def invoker(self, *args, **kwargs) -> Any:
         '''Invokes the given method after incrementing its call counter.
+
+        Args:
+            self: The instance of the class.
+            *args: Positional arguments passed to the method.
+            **kwargs: Keyword arguments passed to the method.
+
+        Returns:
+            Any: The result of the method call.
         '''
         if isinstance(self._redis, redis.Redis):
             self._redis.incr(method.__qualname__)
@@ -27,13 +41,21 @@ def call_history(method: Callable) -> Callable:
     def invoker(self, *args, **kwargs) -> Any:
         '''Returns the method's output after storing its inputs and output.
         '''
+        # Create keys for input and output storage
         in_key = '{}:inputs'.format(method.__qualname__)
         out_key = '{}:outputs'.format(method.__qualname__)
+
+        # Store input in Redis
         if isinstance(self._redis, redis.Redis):
             self._redis.rpush(in_key, str(args))
+
+        # Call the method and store its output
         output = method(self, *args, **kwargs)
+
+        # Store output in Redis
         if isinstance(self._redis, redis.Redis):
             self._redis.rpush(out_key, output)
+
         return output
     return invoker
 
